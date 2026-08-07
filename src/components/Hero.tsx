@@ -28,19 +28,6 @@ export default function Hero() {
       >
         Ver Catálogo
       </motion.a>
-      
-      <motion.div 
-        className="mt-20 w-full max-w-4xl rounded-[2.5rem] overflow-hidden shadow-2xl relative"
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-      >
-         <img 
-            src="https://images.unsplash.com/photo-1605236453806-6ff36851218e?auto=format&fit=crop&q=80&w=1200" 
-            alt="Refurbished iPhones" 
-            className="w-full h-auto object-cover"
-         />
-      </motion.div>
     </section>
   );
 }
