@@ -27,7 +27,12 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('apple_store_products', JSON.stringify(products));
+    try {
+      localStorage.setItem('apple_store_products', JSON.stringify(products));
+    } catch (e) {
+      console.error("Local storage error:", e);
+      alert("No se pudieron guardar los cambios. El tamaño de las imágenes excede el límite permitido. Por favor, intenta con menos imágenes.");
+    }
   }, [products]);
 
   useEffect(() => {
