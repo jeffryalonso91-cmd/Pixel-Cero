@@ -114,16 +114,42 @@ export default function Catalog({ products }: { products: Product[] }) {
             transition={{ duration: 0.6, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] }}
           >
             <div 
-              className="aspect-[4/3] bg-apple-bg overflow-hidden p-8 flex items-center justify-center cursor-pointer relative"
+              className="aspect-[4/3] bg-apple-bg overflow-hidden p-4 flex items-center justify-center cursor-pointer relative"
               onClick={() => setActiveGallery(product.images && product.images.length > 0 ? product.images : [(product as any).imageUrl])}
             >
-              <img 
-                src={(product.images && product.images.length > 0) ? product.images[0] : (product as any).imageUrl} 
-                alt={product.model} 
-                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                <span className="bg-white/90 backdrop-blur-sm text-apple-text text-sm font-medium px-4 py-2 rounded-full shadow-sm">
+              {(() => {
+                const images = product.images && product.images.length > 0 ? product.images : [(product as any).imageUrl];
+                const displayImages = images.slice(0, 3);
+                return (
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    {displayImages.map((img, i) => {
+                      const rotations = [0, -4, 4];
+                      const scales = [1, 0.95, 0.9];
+                      const zIndexes = [3, 2, 1];
+                      
+                      return (
+                        <div 
+                          key={i}
+                          className={`absolute ${displayImages.length > 1 ? 'w-4/5 h-4/5 rounded-2xl overflow-hidden shadow-sm border border-black/5 bg-white' : 'w-full h-full p-4'} transition-all duration-500 group-hover:shadow-md`}
+                          style={{
+                            zIndex: zIndexes[i],
+                            transform: displayImages.length > 1 ? `rotate(${rotations[i]}deg) scale(${scales[i]})` : 'none',
+                          }}
+                        >
+                          <img 
+                            src={img}
+                            alt={`${product.model} - foto ${i + 1}`}
+                            className={`w-full h-full group-hover:scale-105 transition-transform duration-700 ease-out ${displayImages.length > 1 ? 'object-cover' : 'object-contain'}`}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors z-20 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                <span className="bg-white/95 backdrop-blur-sm text-apple-text text-sm font-medium px-4 py-2 rounded-full shadow-sm">
                   Ver galería
                 </span>
               </div>
