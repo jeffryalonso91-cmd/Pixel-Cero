@@ -14,10 +14,14 @@ async function hashPassword(password: string) {
 
 export default function Admin({
   products,
-  setProducts
+  setProducts,
+  storeConfig,
+  setStoreConfig
 }: {
   products: Product[];
   setProducts: (p: Product[]) => void;
+  storeConfig: any;
+  setStoreConfig: (c: any) => void;
 }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
@@ -29,6 +33,9 @@ export default function Admin({
   const [isNew, setIsNew] = useState(false);
   const [copied, setCopied] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'inventory' | 'config'>('inventory');
+  const [configEditing, setConfigEditing] = useState(false);
+  const [tempConfig, setTempConfig] = useState(storeConfig);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +71,7 @@ export default function Admin({
     setError('Credenciales incorrectas');
   };
 
-  const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const product: Product = {
@@ -83,6 +90,14 @@ export default function Admin({
     } else {
       setProducts(products.map(p => p.id === product.id ? product : p));
     }
+    
+    // Write to Firestore
+    import('firebase/firestore').then(({ doc, setDoc }) => {
+      import('../firebase').then(({ db }) => {
+        setDoc(doc(db, 'products', product.id), product).catch(console.error);
+      });
+    });
+
     setEditing(null);
     setIsNew(false);
   };
@@ -94,6 +109,15 @@ export default function Admin({
   const confirmDelete = () => {
     if (deleteConfirm) {
       setProducts(products.filter(p => p.id !== deleteConfirm));
+      
+      // Delete from Firestore
+      const idToDelete = deleteConfirm;
+      import('firebase/firestore').then(({ doc, deleteDoc }) => {
+        import('../firebase').then(({ db }) => {
+          deleteDoc(doc(db, 'products', idToDelete)).catch(console.error);
+        });
+      });
+      
       setDeleteConfirm(null);
     }
   };
@@ -159,33 +183,51 @@ export default function Admin({
   return (
     <div className="min-h-screen bg-apple-bg p-6 md:p-12 font-sans">
       <div className="max-w-5xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+        <div className="flex flex-col gap-6 mb-10">
           <div>
             <a href="#" className="inline-flex items-center gap-2 text-apple-gray hover:text-apple-text transition-colors text-sm font-medium mb-4">
               <ArrowLeft size={16} /> Volver a la Tienda
             </a>
-            <h1 className="text-3xl md:text-4xl font-semibold text-apple-text tracking-tight">Inventario</h1>
-            <p className="text-apple-gray mt-2">Agrega, edita o elimina artículos de tu catálogo.</p>
+            <h1 className="text-3xl md:text-4xl font-semibold text-apple-text tracking-tight">Administración</h1>
+            <p className="text-apple-gray mt-2">Gestiona el inventario y la configuración de tu tienda.</p>
           </div>
-          <div className="flex flex-wrap gap-4">
+
+          <div className="flex gap-2 p-1 bg-gray-200/50 rounded-2xl w-fit">
             <button
-              onClick={handleExport}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-full text-apple-text hover:bg-gray-50 transition-colors font-medium shadow-sm"
+              onClick={() => setActiveTab('inventory')}
+              className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === 'inventory' ? 'bg-white shadow-sm text-apple-text' : 'text-apple-gray hover:text-apple-text'}`}
             >
-              {copied ? <Check size={18} className="text-green-500" /> : <Copy size={18} />}
-              {copied ? '¡Código Copiado!' : 'Exportar Cambios'}
+              Inventario
             </button>
             <button
-              onClick={() => { setEditing({} as Product); setEditingImages([]); setIsNew(true); }}
-              className="flex items-center gap-2 px-5 py-2.5 bg-apple-blue text-white rounded-full hover:bg-apple-blue-hover transition-colors font-medium shadow-sm"
+              onClick={() => setActiveTab('config')}
+              className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === 'config' ? 'bg-white shadow-sm text-apple-text' : 'text-apple-gray hover:text-apple-text'}`}
             >
-              <Plus size={18} />
-              Nuevo Artículo
+              Ajustes de Tienda
             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        {activeTab === 'inventory' && (
+          <>
+            <div className="flex flex-wrap gap-4 mb-6 justify-end">
+              <button
+                onClick={handleExport}
+                className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-full text-apple-text hover:bg-gray-50 transition-colors font-medium shadow-sm"
+              >
+                {copied ? <Check size={18} className="text-green-500" /> : <Copy size={18} />}
+                {copied ? '¡Código Copiado!' : 'Exportar Cambios'}
+              </button>
+              <button
+                onClick={() => { setEditing({} as Product); setEditingImages([]); setIsNew(true); }}
+                className="flex items-center gap-2 px-5 py-2.5 bg-apple-blue text-white rounded-full hover:bg-apple-blue-hover transition-colors font-medium shadow-sm"
+              >
+                <Plus size={18} />
+                Nuevo Artículo
+              </button>
+            </div>
+
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
@@ -324,7 +366,7 @@ export default function Admin({
                         className="hidden"
                         onChange={async (e) => {
                           if (!e.target.files) return;
-                          const files = Array.from(e.target.files);
+                          const files = Array.from(e.target.files) as File[];
                           const newImages = await Promise.all(files.map(file => {
                             return new Promise<string>((resolve) => {
                               const reader = new FileReader();
@@ -414,6 +456,83 @@ export default function Admin({
                   className="flex-1 py-3 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors"
                 >
                   Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        </>
+        )}
+
+        {activeTab === 'config' && (
+          <div className="bg-white rounded-3xl p-8 max-w-2xl shadow-sm border border-gray-100">
+            <h2 className="text-2xl font-semibold mb-6">Ajustes Generales</h2>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Nombre de la Tienda</label>
+                <input
+                  type="text"
+                  value={tempConfig.storeName}
+                  onChange={(e) => setTempConfig({...tempConfig, storeName: e.target.value})}
+                  className="w-full p-4 bg-apple-bg rounded-2xl border-2 border-transparent focus:border-apple-blue focus:bg-white outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Número de WhatsApp (ej: +1234567890)</label>
+                <input
+                  type="text"
+                  value={tempConfig.whatsappNumber}
+                  onChange={(e) => setTempConfig({...tempConfig, whatsappNumber: e.target.value})}
+                  className="w-full p-4 bg-apple-bg rounded-2xl border-2 border-transparent focus:border-apple-blue focus:bg-white outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Correo Electrónico</label>
+                <input
+                  type="email"
+                  value={tempConfig.email}
+                  onChange={(e) => setTempConfig({...tempConfig, email: e.target.value})}
+                  className="w-full p-4 bg-apple-bg rounded-2xl border-2 border-transparent focus:border-apple-blue focus:bg-white outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Enlace de Instagram</label>
+                <input
+                  type="text"
+                  value={tempConfig.instagramUrl}
+                  onChange={(e) => setTempConfig({...tempConfig, instagramUrl: e.target.value})}
+                  className="w-full p-4 bg-apple-bg rounded-2xl border-2 border-transparent focus:border-apple-blue focus:bg-white outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Horario de Atención</label>
+                <input
+                  type="text"
+                  value={tempConfig.businessHours}
+                  onChange={(e) => setTempConfig({...tempConfig, businessHours: e.target.value})}
+                  className="w-full p-4 bg-apple-bg rounded-2xl border-2 border-transparent focus:border-apple-blue focus:bg-white outline-none transition-all"
+                />
+              </div>
+              
+              <div className="pt-4 border-t border-gray-100 flex gap-4">
+                <button
+                  onClick={() => {
+                    setStoreConfig(tempConfig);
+                    import('firebase/firestore').then(({ doc, setDoc }) => {
+                      import('../firebase').then(({ db }) => {
+                        setDoc(doc(db, 'config', 'store'), tempConfig).catch(console.error);
+                      });
+                    });
+                  }}
+                  className="px-8 py-4 bg-apple-blue text-white rounded-full font-medium hover:bg-apple-blue-hover transition-colors"
+                >
+                  Guardar Ajustes
+                </button>
+                <button
+                  onClick={() => setTempConfig(storeConfig)}
+                  className="px-8 py-4 bg-gray-100 text-apple-text rounded-full font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Descartar Cambios
                 </button>
               </div>
             </div>

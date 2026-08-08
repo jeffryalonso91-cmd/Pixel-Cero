@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { CONFIG } from '../data';
+import { useContext } from 'react';
+import { ConfigContext } from '../App';
 import type { Product } from '../data';
 import { MessageCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import React, { useState } from 'react';
@@ -74,10 +75,11 @@ function Lightbox({ images, onClose }: { images: string[], onClose: () => void }
 
 export default function Catalog({ products }: { products: Product[] }) {
   const [activeGallery, setActiveGallery] = useState<string[] | null>(null);
+  const config = useContext(ConfigContext);
 
   const handleWhatsApp = (model: string, price: number) => {
-    const message = encodeURIComponent(`Hola ${CONFIG.storeName}, estoy interesado en el ${model} por ${CONFIG.currencySymbol}${price}. ¿Aún está disponible?`);
-    window.open(`https://wa.me/${CONFIG.whatsappNumber.replace(/[^0-9]/g, '')}?text=${message}`, '_blank');
+    const message = encodeURIComponent(`Hola ${config.storeName}, estoy interesado en el ${model} por ${config.currencySymbol}${price}. ¿Aún está disponible?`);
+    window.open(`https://wa.me/${config.whatsappNumber.replace(/[^0-9]/g, '')}?text=${message}`, '_blank');
   };
 
   return (
@@ -184,7 +186,7 @@ export default function Catalog({ products }: { products: Product[] }) {
               
               <div className="mt-auto flex items-center justify-between">
                 <span className="text-xl font-medium tracking-tight">
-                  {CONFIG.currencySymbol}{product.price}
+                  {config.currencySymbol}{product.price}
                 </span>
                 <button 
                   onClick={() => handleWhatsApp(product.model, product.price)}

@@ -1,9 +1,10 @@
 import { motion } from 'motion/react';
-import { useState, useEffect } from 'react';
-import { CONFIG } from '../data';
+import { useState, useEffect, useContext } from 'react';
+import { ConfigContext } from '../App';
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
+  const config = useContext(ConfigContext);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,7 +25,7 @@ export default function Header() {
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <a href="#" className="font-semibold text-lg tracking-tight text-apple-text">
-          {CONFIG.storeName}
+          {config.storeName}
         </a>
         <nav className="flex items-center gap-4 sm:gap-8 text-sm font-medium">
           <a href="#" className="text-apple-text hover:text-apple-blue transition-colors">inicio</a>
