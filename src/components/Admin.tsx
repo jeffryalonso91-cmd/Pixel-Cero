@@ -212,6 +212,31 @@ export default function Admin({
           <>
             <div className="flex flex-wrap gap-4 mb-6 justify-end">
               <button
+                onClick={async () => {
+                  try {
+                    const { doc, setDoc } = await import('firebase/firestore');
+                    const { db } = await import('../firebase');
+                    const localforage = (await import('localforage')).default;
+                    
+                    const savedProducts: any = await localforage.getItem('apple_store_products');
+                    if (savedProducts && savedProducts.length > 0) {
+                      for (const p of savedProducts) {
+                        await setDoc(doc(db, 'products', p.id), p);
+                      }
+                      alert(`Se han subido ${savedProducts.length} artículos a la base de datos de manera forzada.`);
+                    } else {
+                      alert('No se encontraron artículos guardados de manera local para subir.');
+                    }
+                  } catch (e) {
+                    console.error("Error subiendo data", e);
+                    alert("Hubo un error subiendo los datos.");
+                  }
+                }}
+                className="flex items-center gap-2 px-5 py-2.5 bg-yellow-100 text-yellow-800 border border-yellow-200 rounded-full hover:bg-yellow-200 transition-colors font-medium shadow-sm"
+              >
+                Subir Datos Locales a BD (Temporal)
+              </button>
+              <button
                 onClick={handleExport}
                 className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-full text-apple-text hover:bg-gray-50 transition-colors font-medium shadow-sm"
               >
