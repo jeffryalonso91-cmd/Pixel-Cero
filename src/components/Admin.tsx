@@ -28,6 +28,7 @@ export default function Admin({
   const [editingImages, setEditingImages] = useState<string[]>([]);
   const [isNew, setIsNew] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,6 +74,7 @@ export default function Admin({
       condition: formData.get('condition') as string,
       battery: formData.get('battery') as string,
       price: Number(formData.get('price')),
+      status: (formData.get('status') as 'Disponible' | 'Vendido') || 'Disponible',
       images: editingImages.length > 0 ? editingImages : [formData.get('imageUrl') as string].filter(Boolean),
     };
 
@@ -86,8 +88,13 @@ export default function Admin({
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("¿Estás seguro de que deseas eliminar este artículo?")) {
-      setProducts(products.filter(p => p.id !== id));
+    setDeleteConfirm(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm) {
+      setProducts(products.filter(p => p.id !== deleteConfirm));
+      setDeleteConfirm(null);
     }
   };
 
@@ -187,6 +194,7 @@ export default function Admin({
                   <th className="px-6 py-4 font-medium">Capacidad</th>
                   <th className="px-6 py-4 font-medium">Precio</th>
                   <th className="px-6 py-4 font-medium">Batería</th>
+                  <th className="px-6 py-4 font-medium">Condición</th>
                   <th className="px-6 py-4 font-medium">Estado</th>
                   <th className="px-6 py-4 font-medium text-right">Acciones</th>
                 </tr>
@@ -194,7 +202,7 @@ export default function Admin({
               <tbody>
                 {products.length === 0 ? (
                    <tr>
-                     <td colSpan={6} className="px-6 py-12 text-center text-apple-gray">
+                     <td colSpan={7} className="px-6 py-12 text-center text-apple-gray">
                        No hay artículos en el inventario. Haz clic en "Nuevo Artículo" para empezar.
                      </td>
                    </tr>
@@ -211,6 +219,11 @@ export default function Admin({
                     <td className="px-6 py-4 font-medium text-apple-text">${p.price}</td>
                     <td className="px-6 py-4 text-apple-gray">{p.battery}</td>
                     <td className="px-6 py-4 text-apple-gray">{p.condition}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${p.status === 'Vendido' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                        {p.status || 'Disponible'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 flex justify-end gap-2 items-center h-[81px]">
                       <button
                         onClick={() => { setEditing(p); setEditingImages(p.images || [(p as any).imageUrl]); setIsNew(false); }}
@@ -272,6 +285,13 @@ export default function Admin({
                     <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Batería (%)</label>
                     <input required name="battery" defaultValue={editing.battery} className="w-full p-4 bg-apple-bg rounded-2xl border-2 border-transparent focus:border-apple-blue focus:bg-white outline-none transition-all placeholder:text-gray-400" placeholder="Ej: 100%" />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Estado</label>
+                  <select name="status" defaultValue={editing.status || 'Disponible'} className="w-full p-4 bg-apple-bg rounded-2xl border-2 border-transparent focus:border-apple-blue focus:bg-white outline-none transition-all">
+                    <option value="Disponible">Disponible</option>
+                    <option value="Vendido">Vendido</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Fotos del Artículo</label>
@@ -373,6 +393,29 @@ export default function Admin({
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+        
+        {deleteConfirm && (
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl relative">
+              <h3 className="text-xl font-semibold mb-4 text-apple-text">¿Eliminar artículo?</h3>
+              <p className="text-apple-gray mb-8">Esta acción no se puede deshacer.</p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 py-3 px-4 bg-gray-100 text-apple-text rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 py-3 px-4 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors"
+                >
+                  Eliminar
+                </button>
+              </div>
             </div>
           </div>
         )}

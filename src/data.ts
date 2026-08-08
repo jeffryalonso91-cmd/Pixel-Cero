@@ -15,6 +15,7 @@ export type Product = {
   battery: string;
   price: number;
   images: string[];
+  status?: 'Disponible' | 'Vendido';
 };
 
 export const PRODUCTS: Product[] = [
@@ -26,6 +27,7 @@ export const PRODUCTS: Product[] = [
     battery: "95%",
     price: 899,
     images: ["https://images.unsplash.com/photo-1678652197831-2d180705cd2c?auto=format&fit=crop&q=80&w=1200"],
+    status: 'Disponible',
   },
   {
     id: "2",
@@ -35,6 +37,7 @@ export const PRODUCTS: Product[] = [
     battery: "91%",
     price: 799,
     images: ["https://images.unsplash.com/photo-1695048064971-d68a98f1ac51?auto=format&fit=crop&q=80&w=1200"],
+    status: 'Disponible',
   },
   {
     id: "3",
@@ -44,6 +47,7 @@ export const PRODUCTS: Product[] = [
     battery: "98%",
     price: 599,
     images: ["https://images.unsplash.com/photo-1662993132644-884ec85c7f8a?auto=format&fit=crop&q=80&w=1200"],
+    status: 'Disponible',
   },
   {
     id: "4",
@@ -53,6 +57,7 @@ export const PRODUCTS: Product[] = [
     battery: "88%",
     price: 649,
     images: ["https://images.unsplash.com/photo-1632661674596-618d8b64d641?auto=format&fit=crop&q=80&w=1200"],
+    status: 'Disponible',
   },
   {
     id: "5",
@@ -62,6 +67,7 @@ export const PRODUCTS: Product[] = [
     battery: "85%",
     price: 549,
     images: ["https://images.unsplash.com/photo-1632661674596-618d8b64d641?auto=format&fit=crop&q=80&w=1200"],
+    status: 'Disponible',
   },
   {
     id: "6",
@@ -71,5 +77,6 @@ export const PRODUCTS: Product[] = [
     battery: "82%",
     price: 249,
     images: ["https://images.unsplash.com/photo-1574856344991-abc31b6caa8e?auto=format&fit=crop&q=80&w=1200"],
+    status: 'Disponible',
   }
 ];

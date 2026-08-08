@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import localforage from 'localforage';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Catalog from './components/Catalog';
@@ -13,27 +14,42 @@ import Admin from './components/Admin';
 import { PRODUCTS, Product } from './data';
 
 export default function App() {
-  const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('apple_store_products');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return parsed.map((p: any) => ({
-        ...p,
-        images: p.images || (p.imageUrl ? [p.imageUrl] : [])
-      }));
-    }
-    return PRODUCTS;
-  });
+  const [products, setProducts] = useState<Product[]>(PRODUCTS);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('apple_store_products', JSON.stringify(products));
-    } catch (e) {
-      console.error("Local storage error:", e);
-      alert("No se pudieron guardar los cambios. El tamaño de las imágenes excede el límite permitido. Por favor, intenta con menos imágenes.");
+    localforage.getItem('apple_store_products').then((saved: any) => {
+      if (saved) {
+        setProducts(saved.map((p: any) => ({
+          ...p,
+          images: p.images || (p.imageUrl ? [p.imageUrl] : [])
+        })));
+      } else {
+        const legacy = localStorage.getItem('apple_store_products');
+        if (legacy) {
+          const parsed = JSON.parse(legacy);
+          setProducts(parsed.map((p: any) => ({
+            ...p,
+            images: p.images || (p.imageUrl ? [p.imageUrl] : [])
+          })));
+        }
+      }
+      setLoading(false);
+    }).catch(err => {
+      console.error("Error loading from localforage:", err);
+      setLoading(false);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      localforage.setItem('apple_store_products', products).catch(e => {
+        console.error("Storage error:", e);
+        alert("No se pudieron guardar los cambios. Intenta con menos imágenes.");
+      });
     }
-  }, [products]);
+  }, [products, loading]);
 
   useEffect(() => {
     const checkHash = () => setIsAdmin(window.location.hash === '#admin');
@@ -41,6 +57,10 @@ export default function App() {
     window.addEventListener('hashchange', checkHash);
     return () => window.removeEventListener('hashchange', checkHash);
   }, []);
+
+  if (loading) {
+    return <div className="min-h-screen bg-apple-bg flex items-center justify-center font-sans text-apple-gray">Cargando...</div>;
+  }
 
   if (isAdmin) {
     return <Admin products={products} setProducts={setProducts} />;

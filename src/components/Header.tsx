@@ -26,7 +26,7 @@ export default function Header() {
         <a href="#" className="font-semibold text-lg tracking-tight text-apple-text">
           {CONFIG.storeName}
         </a>
-        <nav className="hidden sm:flex items-center gap-8 text-sm font-medium">
+        <nav className="flex items-center gap-4 sm:gap-8 text-sm font-medium">
           <a href="#" className="text-apple-text hover:text-apple-blue transition-colors">inicio</a>
           <a href="#catalog" className="text-apple-text hover:text-apple-blue transition-colors">catálogo</a>
           <a href="#contact" className="text-apple-text hover:text-apple-blue transition-colors">contacto</a>
