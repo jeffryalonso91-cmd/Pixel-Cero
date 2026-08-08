@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Product } from '../data';
-import { Plus, Pencil, Trash2, X, Copy, Check, ArrowLeft, Lock } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, ArrowLeft, Lock } from 'lucide-react';
 
 const ADMIN_USER = 'jeffryalonso';
 const ADMIN_PASS_HASH = 'da493771a623609181757240c69dfc2ff99bb1fef4a12789b3f3c7f6c4f7afb3';
@@ -31,7 +31,6 @@ export default function Admin({
   const [editing, setEditing] = useState<Product | null>(null);
   const [editingImages, setEditingImages] = useState<string[]>([]);
   const [isNew, setIsNew] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'inventory' | 'config'>('inventory');
   const [configEditing, setConfigEditing] = useState(false);
@@ -122,13 +121,6 @@ export default function Admin({
     }
   };
 
-  const handleExport = () => {
-    const code = `export const PRODUCTS: Product[] = ${JSON.stringify(products, null, 2)};`;
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-apple-bg flex items-center justify-center p-6 font-sans">
@@ -211,38 +203,6 @@ export default function Admin({
         {activeTab === 'inventory' && (
           <>
             <div className="flex flex-wrap gap-4 mb-6 justify-end">
-              <button
-                onClick={async () => {
-                  try {
-                    const { doc, setDoc } = await import('firebase/firestore');
-                    const { db } = await import('../firebase');
-                    const localforage = (await import('localforage')).default;
-                    
-                    const savedProducts: any = await localforage.getItem('apple_store_products');
-                    if (savedProducts && savedProducts.length > 0) {
-                      for (const p of savedProducts) {
-                        await setDoc(doc(db, 'products', p.id), p);
-                      }
-                      alert(`Se han subido ${savedProducts.length} artículos a la base de datos de manera forzada.`);
-                    } else {
-                      alert('No se encontraron artículos guardados de manera local para subir.');
-                    }
-                  } catch (e) {
-                    console.error("Error subiendo data", e);
-                    alert("Hubo un error subiendo los datos.");
-                  }
-                }}
-                className="flex items-center gap-2 px-5 py-2.5 bg-yellow-100 text-yellow-800 border border-yellow-200 rounded-full hover:bg-yellow-200 transition-colors font-medium shadow-sm"
-              >
-                Subir Datos Locales a BD (Temporal)
-              </button>
-              <button
-                onClick={handleExport}
-                className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-full text-apple-text hover:bg-gray-50 transition-colors font-medium shadow-sm"
-              >
-                {copied ? <Check size={18} className="text-green-500" /> : <Copy size={18} />}
-                {copied ? '¡Código Copiado!' : 'Exportar Cambios'}
-              </button>
               <button
                 onClick={() => { setEditing({} as Product); setEditingImages([]); setIsNew(true); }}
                 className="flex items-center gap-2 px-5 py-2.5 bg-apple-blue text-white rounded-full hover:bg-apple-blue-hover transition-colors font-medium shadow-sm"
