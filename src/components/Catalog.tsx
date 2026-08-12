@@ -75,6 +75,7 @@ function Lightbox({ images, onClose }: { images: string[], onClose: () => void }
 
 export default function Catalog({ products }: { products: Product[] }) {
   const [activeGallery, setActiveGallery] = useState<string[] | null>(null);
+  const [filter, setFilter] = useState<'all' | 'available' | 'sold'>('all');
   const config = useContext(ConfigContext);
 
   const handleWhatsApp = (model: string, price: number) => {
@@ -82,9 +83,16 @@ export default function Catalog({ products }: { products: Product[] }) {
     window.open(`https://wa.me/${config.whatsappNumber.replace(/[^0-9]/g, '')}?text=${message}`, '_blank');
   };
 
+  const filteredProducts = products.filter(p => {
+    if (filter === 'all') return true;
+    if (filter === 'available') return p.status !== 'Vendido';
+    if (filter === 'sold') return p.status === 'Vendido';
+    return true;
+  });
+
   return (
     <section id="catalog" className="py-24 px-6 max-w-7xl mx-auto">
-      <div className="text-center mb-16">
+      <div className="text-center mb-10">
         <motion.h2 
           className="text-4xl md:text-5xl font-semibold tracking-tight text-apple-text mb-4"
           initial={{ opacity: 0, y: 20 }}
@@ -92,7 +100,7 @@ export default function Catalog({ products }: { products: Product[] }) {
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
-          Modelos Disponibles
+          Catálogo de Productos
         </motion.h2>
         <motion.p
           className="text-lg text-apple-gray"
@@ -105,8 +113,34 @@ export default function Catalog({ products }: { products: Product[] }) {
         </motion.p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {products.map((product, index) => (
+      <div className="flex justify-center gap-2 mb-12">
+        <button
+          onClick={() => setFilter('all')}
+          className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors ${filter === 'all' ? 'bg-apple-text text-white' : 'bg-apple-bg text-apple-gray hover:bg-gray-200'}`}
+        >
+          Todos
+        </button>
+        <button
+          onClick={() => setFilter('available')}
+          className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors ${filter === 'available' ? 'bg-apple-text text-white' : 'bg-apple-bg text-apple-gray hover:bg-gray-200'}`}
+        >
+          Disponibles
+        </button>
+        <button
+          onClick={() => setFilter('sold')}
+          className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors ${filter === 'sold' ? 'bg-apple-text text-white' : 'bg-apple-bg text-apple-gray hover:bg-gray-200'}`}
+        >
+          Vendidos
+        </button>
+      </div>
+
+      {filteredProducts.length === 0 ? (
+        <div className="text-center py-20">
+          <p className="text-xl text-apple-gray">No hay artículos en esta categoría.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredProducts.map((product, index) => (
           <motion.div 
             key={product.id}
             className="bg-apple-card rounded-[24px] overflow-hidden flex flex-col group hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
@@ -208,6 +242,7 @@ export default function Catalog({ products }: { products: Product[] }) {
           </motion.div>
         ))}
       </div>
+      )}
 
       <AnimatePresence>
         {activeGallery && (

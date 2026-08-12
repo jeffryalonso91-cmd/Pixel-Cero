@@ -24,7 +24,10 @@ export default function Header() {
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        <a href="#" className="font-semibold text-lg tracking-tight text-apple-text">
+        <a href="#" className="flex items-center gap-3 font-semibold text-lg tracking-tight text-apple-text">
+          {config.logoUrl && (
+            <img src={config.logoUrl} alt={`${config.storeName} Logo`} className="h-8 w-auto object-contain" />
+          )}
           {config.storeName}
         </a>
         <nav className="flex items-center gap-4 sm:gap-8 text-sm font-medium">

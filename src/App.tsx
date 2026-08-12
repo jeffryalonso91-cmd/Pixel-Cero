@@ -11,6 +11,7 @@ import Catalog from './components/Catalog';
 import Trust from './components/Trust';
 import Footer from './components/Footer';
 import Admin from './components/Admin';
+import PopupBanner from './components/PopupBanner';
 import { PRODUCTS, Product, CONFIG } from './data';
 
 export const ConfigContext = createContext(CONFIG);
@@ -29,24 +30,28 @@ export default function App() {
       import('firebase/firestore').then(async ({ collection, onSnapshot, doc, setDoc, getDocs, getDoc }) => {
         const { db } = await import('./firebase');
         
-        // Migrate initial data to Firestore if it's empty
-        const configDoc = await getDoc(doc(db, 'config', 'store'));
-        if (!configDoc.exists() && savedConfig) {
-          await setDoc(doc(db, 'config', 'store'), savedConfig);
-        } else if (!configDoc.exists()) {
-          await setDoc(doc(db, 'config', 'store'), CONFIG);
-        }
-
-        const productsSnapshot = await getDocs(collection(db, 'products'));
-        if (productsSnapshot.empty) {
-          let initialProducts = PRODUCTS;
-          if (savedProducts) {
-             initialProducts = savedProducts.map((p: any) => ({
-              ...p,
-              images: p.images || (p.imageUrl ? [p.imageUrl] : [])
-            }));
+        try {
+          // Migrate initial data to Firestore if it's empty
+          const configDoc = await getDoc(doc(db, 'config', 'store'));
+          if (!configDoc.exists() && savedConfig) {
+            await setDoc(doc(db, 'config', 'store'), savedConfig);
+          } else if (!configDoc.exists()) {
+            await setDoc(doc(db, 'config', 'store'), CONFIG);
           }
-          await Promise.all(initialProducts.map(p => setDoc(doc(db, 'products', p.id), p)));
+
+          const productsSnapshot = await getDocs(collection(db, 'products'));
+          if (productsSnapshot.empty) {
+            let initialProducts = PRODUCTS;
+            if (savedProducts) {
+               initialProducts = savedProducts.map((p: any) => ({
+                ...p,
+                images: p.images || (p.imageUrl ? [p.imageUrl] : [])
+              }));
+            }
+            await Promise.all(initialProducts.map(p => setDoc(doc(db, 'products', p.id), p)));
+          }
+        } catch (err) {
+          console.warn('Seeding data skipped due to permissions (expected for non-admin users).', err);
         }
 
         const unsubscribeProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
@@ -94,6 +99,7 @@ export default function App() {
           <Trust />
         </main>
         <Footer />
+        <PopupBanner />
       </div>
     </ConfigContext.Provider>
   );

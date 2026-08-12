@@ -5,6 +5,9 @@ export const CONFIG = {
   instagramUrl: "https://instagram.com/pixelcero",
   businessHours: "Lun - Vie, 9 AM - 6 PM",
   currencySymbol: "$",
+  logoUrl: "",
+  popupEnabled: false,
+  popupImageUrl: "",
 };
 
 export type Product = {

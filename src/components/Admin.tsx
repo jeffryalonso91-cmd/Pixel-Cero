@@ -1,9 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Product } from '../data';
 import { Plus, Pencil, Trash2, X, ArrowLeft, Lock } from 'lucide-react';
-
-const ADMIN_USER = 'jeffryalonso';
-const ADMIN_PASS_HASH = 'da493771a623609181757240c69dfc2ff99bb1fef4a12789b3f3c7f6c4f7afb3';
 
 async function hashPassword(password: string) {
   const msgBuffer = new TextEncoder().encode(password);
@@ -11,6 +8,38 @@ async function hashPassword(password: string) {
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
+
+const processImageFile = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height;
+            height = maxHeight;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+};
 
 export default function Admin({
   products,
@@ -27,47 +56,195 @@ export default function Admin({
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [editing, setEditing] = useState<Product | null>(null);
   const [editingImages, setEditingImages] = useState<string[]>([]);
   const [isNew, setIsNew] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'inventory' | 'config'>('inventory');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'config' | 'users'>('inventory');
   const [configEditing, setConfigEditing] = useState(false);
   const [tempConfig, setTempConfig] = useState(storeConfig);
 
+  // User management state
+  const [newUsername, setNewUsername] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserError, setNewUserError] = useState('');
+  const [newUserSuccess, setNewUserSuccess] = useState('');
+  
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const isAuth = sessionStorage.getItem('admin_auth') === 'true';
+      setIsAuthenticated(isAuth);
+      setAuthLoading(false);
+    };
+    checkAuth();
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = username.trim();
-    const pass = password.trim();
+    setError('');
+    const trimmedUsername = username.trim();
     
-    if (user !== ADMIN_USER) {
-      setError('Credenciales incorrectas');
+    try {
+      const { collection, getDocs } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+      
+      const hashedInput = await hashPassword(password);
+      
+      // Hardcoded fallback since Firestore quota is exceeded or db mismatch
+      if (trimmedUsername === 'jeffryalonso' && (password === 'MaRAZOjeff2691' || hashedInput === 'da493771a623609181757240c69dfc2ff99bb1fef4a12789b3f3c7f6c4f7afb3')) {
+        setIsAuthenticated(true);
+        sessionStorage.setItem('admin_auth', 'true');
+        sessionStorage.setItem('admin_user', trimmedUsername);
+        return;
+      }
+      
+      let foundUser = false;
+      let validPassword = false;
+
+      // Check 'users' collection
+      const usersSnap = await getDocs(collection(db, 'users'));
+      usersSnap.forEach((doc) => {
+        const data = doc.data();
+        const docUsername = data.username || data.usuario || data.user || doc.id;
+        if (docUsername === trimmedUsername) {
+          foundUser = true;
+          if (data.password === password || data.passwordHash === hashedInput || data.contraseña === password || data.contrasenia === password || data.clave === password) {
+            validPassword = true;
+          }
+        }
+      });
+
+      // Check 'usuarios' collection if not found
+      if (!foundUser) {
+        const usuariosSnap = await getDocs(collection(db, 'usuarios'));
+        usuariosSnap.forEach((doc) => {
+          const data = doc.data();
+          const docUsername = data.username || data.usuario || data.user || doc.id;
+          if (docUsername === trimmedUsername) {
+            foundUser = true;
+            if (data.password === password || data.passwordHash === hashedInput || data.contraseña === password || data.contrasenia === password || data.clave === password) {
+              validPassword = true;
+            }
+          }
+        });
+      }
+
+      if (foundUser && validPassword) {
+        setIsAuthenticated(true);
+        sessionStorage.setItem('admin_auth', 'true');
+        sessionStorage.setItem('admin_user', trimmedUsername);
+        return;
+      }
+      
+      if (foundUser && !validPassword) {
+        setError('Contraseña incorrecta.');
+        return;
+      }
+      
+      setError('Credenciales incorrectas o usuario no existe.');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError('Error al iniciar sesión.');
+    }
+  };
+
+  const handleLogout = async () => {
+    sessionStorage.removeItem('admin_auth');
+    sessionStorage.removeItem('admin_user');
+    setIsAuthenticated(false);
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNewUserError('');
+    setNewUserSuccess('');
+    
+    if (newUserPassword.length < 6) {
+      setNewUserError('La contraseña debe tener al menos 6 caracteres');
       return;
     }
     
     try {
-      if (typeof crypto !== 'undefined' && crypto.subtle) {
-        const hashed = await hashPassword(pass);
-        if (hashed === ADMIN_PASS_HASH) {
-          setIsAuthenticated(true);
-          setError('');
-          return;
-        }
+      const { doc, setDoc, getDoc } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+      
+      const targetUsername = newUsername.trim();
+      const userRef = doc(db, 'users', targetUsername);
+      const userSnap = await getDoc(userRef);
+      
+      if (userSnap.exists() || targetUsername === 'jeffryalonso') {
+        setNewUserError('El usuario ya existe.');
+        return;
+      }
+      
+      const passwordHash = await hashPassword(newUserPassword);
+      await setDoc(userRef, {
+        username: targetUsername,
+        passwordHash,
+        createdAt: Date.now()
+      });
+      
+      setNewUserSuccess(`Usuario '${targetUsername}' creado exitosamente.`);
+      setNewUsername('');
+      setNewUserPassword('');
+    } catch (err: any) {
+      console.error(err);
+      setNewUserError('Error al crear usuario.');
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+    
+    if (newPassword.length < 6) {
+      setPasswordError('La nueva contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+    
+    try {
+      const { doc, updateDoc, getDoc } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+      
+      const currentUser = sessionStorage.getItem('admin_user');
+      if (!currentUser || currentUser === 'jeffryalonso') {
+        setPasswordError('No se puede cambiar la contraseña del administrador por defecto.');
+        return;
+      }
+      
+      // Update in whatever collection it might be (users or usuarios)
+      const userRef = doc(db, 'users', currentUser);
+      const userSnap = await getDoc(userRef);
+      
+      const passwordHash = await hashPassword(newPassword);
+      
+      if (userSnap.exists()) {
+        await updateDoc(userRef, { passwordHash, password: newPassword });
       } else {
-        // Fallback for environments where Web Crypto API is unavailable (e.g. unsecure iframes)
-        // In a real production environment this should be handled server-side.
-        if (pass === 'jf4ij3jsl0Fdd') {
-          setIsAuthenticated(true);
-          setError('');
+        const usuarioRef = doc(db, 'usuarios', currentUser);
+        const usuarioSnap = await getDoc(usuarioRef);
+        if (usuarioSnap.exists()) {
+          await updateDoc(usuarioRef, { passwordHash, password: newPassword });
+        } else {
+          setPasswordError('Usuario no encontrado en la base de datos.');
           return;
         }
       }
-    } catch (err) {
+      
+      setPasswordSuccess('Contraseña actualizada correctamente.');
+      setNewPassword('');
+    } catch (err: any) {
       console.error(err);
+      setPasswordError('Error al actualizar la contraseña.');
     }
-    
-    setError('Credenciales incorrectas');
   };
 
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -121,6 +298,10 @@ export default function Admin({
     }
   };
 
+  if (authLoading) {
+    return <div className="min-h-screen bg-apple-bg flex items-center justify-center p-6 font-sans">Cargando...</div>;
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-apple-bg flex items-center justify-center p-6 font-sans">
@@ -131,7 +312,7 @@ export default function Admin({
             </div>
           </div>
           <h1 className="text-2xl font-semibold text-center tracking-tight mb-2">Acceso Restringido</h1>
-          <p className="text-apple-gray text-center mb-8 text-sm">Ingresa tus credenciales para acceder al panel de administración.</p>
+          <p className="text-apple-gray text-center mb-8 text-sm">Ingresa tu usuario y contraseña para acceder al panel de administración.</p>
           
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
@@ -151,6 +332,7 @@ export default function Admin({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full p-4 bg-apple-bg rounded-2xl border-2 border-transparent focus:border-apple-blue focus:bg-white outline-none transition-all placeholder:text-gray-400"
+                style={{ fontFamily: 'caption' }}
                 required
               />
             </div>
@@ -162,7 +344,7 @@ export default function Admin({
               Iniciar Sesión
             </button>
             <div className="text-center mt-6">
-              <a href="#" className="text-apple-gray hover:text-apple-text text-sm transition-colors inline-flex items-center gap-2">
+              <a href="/" className="text-apple-gray hover:text-apple-text text-sm transition-colors inline-flex items-center gap-2">
                 <ArrowLeft size={14} /> Volver a la tienda
               </a>
             </div>
@@ -196,6 +378,12 @@ export default function Admin({
               className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === 'config' ? 'bg-white shadow-sm text-apple-text' : 'text-apple-gray hover:text-apple-text'}`}
             >
               Ajustes de Tienda
+            </button>
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-white shadow-sm text-apple-text' : 'text-apple-gray hover:text-apple-text'}`}
+            >
+              Usuarios
             </button>
           </div>
         </div>
@@ -490,6 +678,83 @@ export default function Admin({
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Logo de la Tienda (Opcional)</label>
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1">
+                    <label className="w-full p-4 bg-apple-bg hover:bg-gray-200 rounded-2xl border-2 border-dashed border-gray-300 cursor-pointer transition-all flex flex-col items-center justify-center text-apple-gray text-sm">
+                      <span className="font-medium">Subir Logo</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden"
+                        onChange={async (e) => {
+                          if (!e.target.files || !e.target.files[0]) return;
+                          const file = e.target.files[0];
+                          const base64 = await processImageFile(file, 200, 200);
+                          setTempConfig({...tempConfig, logoUrl: base64});
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {tempConfig.logoUrl && (
+                    <div className="w-16 h-16 rounded-xl border border-gray-200 overflow-hidden flex-shrink-0 bg-white">
+                      <img src={tempConfig.logoUrl} alt="Logo preview" className="w-full h-full object-contain" />
+                    </div>
+                  )}
+                  {tempConfig.logoUrl && (
+                    <button 
+                      type="button" 
+                      onClick={() => setTempConfig({...tempConfig, logoUrl: ''})}
+                      className="px-4 py-2 bg-red-50 text-red-600 rounded-xl font-medium text-sm hover:bg-red-100"
+                    >
+                      Remover
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <input
+                    type="checkbox"
+                    id="popupEnabled"
+                    checked={tempConfig.popupEnabled || false}
+                    onChange={(e) => setTempConfig({...tempConfig, popupEnabled: e.target.checked})}
+                    className="w-5 h-5 rounded text-apple-blue focus:ring-apple-blue"
+                  />
+                  <label htmlFor="popupEnabled" className="text-sm font-medium text-apple-text select-none">Habilitar Banner Emergente de Inicio (HD)</label>
+                </div>
+                
+                {tempConfig.popupEnabled && (
+                  <div className="flex flex-col gap-4">
+                    <div className="flex gap-4 items-end">
+                      <div className="flex-1">
+                        <label className="w-full p-4 bg-apple-bg hover:bg-gray-200 rounded-2xl border-2 border-dashed border-gray-300 cursor-pointer transition-all flex flex-col items-center justify-center text-apple-gray text-sm">
+                          <span className="font-medium">Subir Imagen del Banner (Alta resolución recomendada)</span>
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden"
+                            onChange={async (e) => {
+                              if (!e.target.files || !e.target.files[0]) return;
+                              const file = e.target.files[0];
+                              const base64 = await processImageFile(file, 1920, 1080);
+                              setTempConfig({...tempConfig, popupImageUrl: base64});
+                            }}
+                          />
+                        </label>
+                      </div>
+                      {tempConfig.popupImageUrl && (
+                        <div className="w-32 h-20 rounded-xl border border-gray-200 overflow-hidden flex-shrink-0 bg-white relative">
+                          <img src={tempConfig.popupImageUrl} alt="Banner preview" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Horario de Atención</label>
                 <input
                   type="text"
@@ -520,6 +785,71 @@ export default function Admin({
                   Descartar Cambios
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'users' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+              <h2 className="text-2xl font-semibold mb-6">Cambiar Contraseña</h2>
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Nueva Contraseña</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full p-4 bg-apple-bg rounded-2xl border-2 border-transparent focus:border-apple-blue focus:bg-white outline-none transition-all"
+                    style={{ fontFamily: 'caption' }}
+                    required
+                  />
+                </div>
+                {passwordError && <p className="text-red-500 text-sm">{passwordError}</p>}
+                {passwordSuccess && <p className="text-green-500 text-sm">{passwordSuccess}</p>}
+                <button
+                  type="submit"
+                  className="px-8 py-4 bg-apple-text text-white rounded-full font-medium hover:bg-black transition-colors w-full"
+                >
+                  Actualizar Contraseña
+                </button>
+              </form>
+            </div>
+            
+            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+              <h2 className="text-2xl font-semibold mb-6">Añadir Nuevo Usuario</h2>
+              <p className="text-apple-gray text-sm mb-6">Crea una nueva cuenta de administrador para esta tienda.</p>
+              <form onSubmit={handleCreateUser} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Usuario</label>
+                  <input
+                    type="text"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    className="w-full p-4 bg-apple-bg rounded-2xl border-2 border-transparent focus:border-apple-blue focus:bg-white outline-none transition-all"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Contraseña</label>
+                  <input
+                    type="password"
+                    value={newUserPassword}
+                    onChange={(e) => setNewUserPassword(e.target.value)}
+                    className="w-full p-4 bg-apple-bg rounded-2xl border-2 border-transparent focus:border-apple-blue focus:bg-white outline-none transition-all"
+                    style={{ fontFamily: 'caption' }}
+                    required
+                  />
+                </div>
+                {newUserError && <p className="text-red-500 text-sm">{newUserError}</p>}
+                {newUserSuccess && <p className="text-green-500 text-sm">{newUserSuccess}</p>}
+                <button
+                  type="submit"
+                  className="px-8 py-4 bg-apple-blue text-white rounded-full font-medium hover:bg-apple-blue-hover transition-colors w-full"
+                >
+                  Crear Usuario
+                </button>
+              </form>
             </div>
           </div>
         )}

@@ -1,7 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
-const firebaseConfig = {
+export const firebaseConfig = {
   projectId: "project-79f81a95-1eb5-4cc3-a90",
   appId: "1:689371892944:web:5b9ccda7a22eb330b322d5",
   apiKey: "AIzaSyAyKerSIhORTspPHIK5gt85hDXUj7EPhiQ",
@@ -12,3 +13,4 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, "ai-studio-refurbishediphon-ba28f173-112a-41fb-859d-79d10ee6b01f");
+export const auth = getAuth(app);
