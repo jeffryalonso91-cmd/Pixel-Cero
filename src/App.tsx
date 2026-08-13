@@ -27,20 +27,30 @@ export default function App() {
       localforage.getItem('apple_store_products'),
       localforage.getItem('apple_store_config')
     ]).then(([savedProducts, savedConfig]: [any, any]) => {
-      import('firebase/firestore').then(async ({ collection, onSnapshot, doc, setDoc, getDocs, getDoc }) => {
-        const { db } = await import('./firebase');
-        
+      import('./supabase').then(async ({ supabase }) => {
         try {
-          // Migrate initial data to Firestore if it's empty
-          const configDoc = await getDoc(doc(db, 'config', 'store'));
-          if (!configDoc.exists() && savedConfig) {
-            await setDoc(doc(db, 'config', 'store'), savedConfig);
-          } else if (!configDoc.exists()) {
-            await setDoc(doc(db, 'config', 'store'), CONFIG);
+          // Check config
+          const { data: configData, error: configError } = await supabase
+            .from('store_config')
+            .select('*')
+            .eq('id', 'store')
+            .single();
+
+          if (configError && configError.code === 'PGRST116') {
+             // Does not exist
+             if (savedConfig) {
+               await supabase.from('store_config').insert({ id: 'store', ...savedConfig });
+             } else {
+               await supabase.from('store_config').insert({ id: 'store', ...CONFIG });
+             }
           }
 
-          const productsSnapshot = await getDocs(collection(db, 'products'));
-          if (productsSnapshot.empty) {
+          // Check products
+          const { data: productsData, error: productsError } = await supabase
+            .from('products')
+            .select('*');
+
+          if (productsData && productsData.length === 0) {
             let initialProducts = PRODUCTS;
             if (savedProducts) {
                initialProducts = savedProducts.map((p: any) => ({
@@ -48,27 +58,48 @@ export default function App() {
                 images: p.images || (p.imageUrl ? [p.imageUrl] : [])
               }));
             }
-            await Promise.all(initialProducts.map(p => setDoc(doc(db, 'products', p.id), p)));
+            // insert initial products
+            for (const p of initialProducts) {
+               await supabase.from('products').insert(p);
+            }
           }
         } catch (err) {
-          console.warn('Seeding data skipped due to permissions (expected for non-admin users).', err);
+          console.warn('Seeding data skipped.', err);
         }
 
-        const unsubscribeProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
-          const loadedProducts = snapshot.docs.map(doc => doc.data() as Product);
-          setProducts(loadedProducts);
+        // Subscriptions (Supabase Realtime)
+        const productsSubscription = supabase
+          .channel('public:products')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+             // Fetch all on change for simplicity, like onSnapshot
+             supabase.from('products').select('*').then(({ data }) => {
+               if (data) setProducts(data as Product[]);
+             });
+          })
+          .subscribe();
+
+        const configSubscription = supabase
+          .channel('public:store_config')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, () => {
+             supabase.from('store_config').select('*').eq('id', 'store').single().then(({ data }) => {
+               if (data) setStoreConfig({ ...CONFIG, ...data });
+             });
+          })
+          .subscribe();
+
+        // Initial fetch
+        supabase.from('products').select('*').then(({ data }) => {
+          if (data) setProducts(data as Product[]);
           setLoading(false);
         });
 
-        const unsubscribeConfig = onSnapshot(doc(db, 'config', 'store'), (docSnap) => {
-          if (docSnap.exists()) {
-            setStoreConfig({ ...CONFIG, ...docSnap.data() });
-          }
+        supabase.from('store_config').select('*').eq('id', 'store').single().then(({ data }) => {
+          if (data) setStoreConfig({ ...CONFIG, ...data });
         });
 
         return () => {
-          unsubscribeProducts();
-          unsubscribeConfig();
+          supabase.removeChannel(productsSubscription);
+          supabase.removeChannel(configSubscription);
         };
       });
     });

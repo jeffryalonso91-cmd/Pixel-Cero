@@ -92,8 +92,7 @@ export default function Admin({
     const trimmedUsername = username.trim();
     
     try {
-      const { collection, getDocs } = await import('firebase/firestore');
-      const { db } = await import('../firebase');
+      const { supabase } = await import('../supabase');
       
       const hashedInput = await hashPassword(password);
       
@@ -105,49 +104,22 @@ export default function Admin({
         return;
       }
       
-      let foundUser = false;
-      let validPassword = false;
-
-      // Check 'users' collection
-      const usersSnap = await getDocs(collection(db, 'users'));
-      usersSnap.forEach((doc) => {
-        const data = doc.data();
-        const docUsername = data.username || data.usuario || data.user || doc.id;
-        if (docUsername === trimmedUsername) {
-          foundUser = true;
-          if (data.password === password || data.passwordHash === hashedInput || data.contraseña === password || data.contrasenia === password || data.clave === password) {
-            validPassword = true;
-          }
-        }
-      });
-
-      // Check 'usuarios' collection if not found
-      if (!foundUser) {
-        const usuariosSnap = await getDocs(collection(db, 'usuarios'));
-        usuariosSnap.forEach((doc) => {
-          const data = doc.data();
-          const docUsername = data.username || data.usuario || data.user || doc.id;
-          if (docUsername === trimmedUsername) {
-            foundUser = true;
-            if (data.password === password || data.passwordHash === hashedInput || data.contraseña === password || data.contrasenia === password || data.clave === password) {
-              validPassword = true;
-            }
-          }
-        });
-      }
-
-      if (foundUser && validPassword) {
+      const { data, error: fetchError } = await supabase
+        .from('admin_users')
+        .select('*')
+        .eq('username', trimmedUsername)
+        .single();
+        
+      if (data && data.password_hash === hashedInput) {
         setIsAuthenticated(true);
         sessionStorage.setItem('admin_auth', 'true');
         sessionStorage.setItem('admin_user', trimmedUsername);
         return;
-      }
-      
-      if (foundUser && !validPassword) {
+      } else if (data) {
         setError('Contraseña incorrecta.');
         return;
       }
-      
+
       setError('Credenciales incorrectas o usuario no existe.');
     } catch (err: any) {
       console.error('Login error:', err);
@@ -172,23 +144,20 @@ export default function Admin({
     }
     
     try {
-      const { doc, setDoc, getDoc } = await import('firebase/firestore');
-      const { db } = await import('../firebase');
+      const { supabase } = await import('../supabase');
       
       const targetUsername = newUsername.trim();
-      const userRef = doc(db, 'users', targetUsername);
-      const userSnap = await getDoc(userRef);
+      const { data: userSnap } = await supabase.from('admin_users').select('*').eq('username', targetUsername).single();
       
-      if (userSnap.exists() || targetUsername === 'jeffryalonso') {
+      if (userSnap || targetUsername === 'jeffryalonso') {
         setNewUserError('El usuario ya existe.');
         return;
       }
       
       const passwordHash = await hashPassword(newUserPassword);
-      await setDoc(userRef, {
+      await supabase.from('admin_users').insert({
         username: targetUsername,
-        passwordHash,
-        createdAt: Date.now()
+        password_hash: passwordHash
       });
       
       setNewUserSuccess(`Usuario '${targetUsername}' creado exitosamente.`);
@@ -211,8 +180,7 @@ export default function Admin({
     }
     
     try {
-      const { doc, updateDoc, getDoc } = await import('firebase/firestore');
-      const { db } = await import('../firebase');
+      const { supabase } = await import('../supabase');
       
       const currentUser = sessionStorage.getItem('admin_user');
       if (!currentUser || currentUser === 'jeffryalonso') {
@@ -220,23 +188,15 @@ export default function Admin({
         return;
       }
       
-      // Update in whatever collection it might be (users or usuarios)
-      const userRef = doc(db, 'users', currentUser);
-      const userSnap = await getDoc(userRef);
+      const { data: userSnap } = await supabase.from('admin_users').select('*').eq('username', currentUser).single();
       
       const passwordHash = await hashPassword(newPassword);
       
-      if (userSnap.exists()) {
-        await updateDoc(userRef, { passwordHash, password: newPassword });
+      if (userSnap) {
+        await supabase.from('admin_users').update({ password_hash: passwordHash }).eq('username', currentUser);
       } else {
-        const usuarioRef = doc(db, 'usuarios', currentUser);
-        const usuarioSnap = await getDoc(usuarioRef);
-        if (usuarioSnap.exists()) {
-          await updateDoc(usuarioRef, { passwordHash, password: newPassword });
-        } else {
-          setPasswordError('Usuario no encontrado en la base de datos.');
-          return;
-        }
+        setPasswordError('Usuario no encontrado en la base de datos.');
+        return;
       }
       
       setPasswordSuccess('Contraseña actualizada correctamente.');
@@ -268,10 +228,9 @@ export default function Admin({
     }
     
     // Write to Firestore
-    import('firebase/firestore').then(({ doc, setDoc }) => {
-      import('../firebase').then(({ db }) => {
-        setDoc(doc(db, 'products', product.id), product).catch(console.error);
-      });
+    import('../supabase').then(async ({ supabase }) => {
+      const { error } = await supabase.from('products').upsert(product);
+      if (error) console.error(error);
     });
 
     setEditing(null);
@@ -288,10 +247,9 @@ export default function Admin({
       
       // Delete from Firestore
       const idToDelete = deleteConfirm;
-      import('firebase/firestore').then(({ doc, deleteDoc }) => {
-        import('../firebase').then(({ db }) => {
-          deleteDoc(doc(db, 'products', idToDelete)).catch(console.error);
-        });
+      import('../supabase').then(async ({ supabase }) => {
+        const { error } = await supabase.from('products').delete().eq('id', idToDelete);
+        if (error) console.error(error);
       });
       
       setDeleteConfirm(null);
@@ -768,10 +726,9 @@ export default function Admin({
                 <button
                   onClick={() => {
                     setStoreConfig(tempConfig);
-                    import('firebase/firestore').then(({ doc, setDoc }) => {
-                      import('../firebase').then(({ db }) => {
-                        setDoc(doc(db, 'config', 'store'), tempConfig).catch(console.error);
-                      });
+                    import('../supabase').then(async ({ supabase }) => {
+                      const { error } = await supabase.from('store_config').upsert({ id: 'store', ...tempConfig });
+                      if (error) console.error(error);
                     });
                   }}
                   className="px-8 py-4 bg-apple-blue text-white rounded-full font-medium hover:bg-apple-blue-hover transition-colors"
