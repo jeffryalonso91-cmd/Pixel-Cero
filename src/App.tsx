@@ -1,3 +1,4 @@
+import ErrorBoundary from './components/ErrorBoundary';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -116,7 +117,7 @@ export default function App() {
   }
 
   if (isAdmin) {
-    return <Admin products={products} setProducts={setProducts} storeConfig={storeConfig} setStoreConfig={setStoreConfig} />;
+    return <ErrorBoundary><Admin products={products} setProducts={setProducts} storeConfig={storeConfig} setStoreConfig={setStoreConfig} /></ErrorBoundary>;
   }
 
   return (

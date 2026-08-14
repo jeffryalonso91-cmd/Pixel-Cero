@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Product } from '../data';
-import { Plus, Pencil, Trash2, X, ArrowLeft, Lock } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, ArrowLeft, Lock, Upload } from 'lucide-react';
 
 async function hashPassword(password: string) {
   const msgBuffer = new TextEncoder().encode(password);
@@ -324,7 +324,7 @@ export default function Admin({
               Inventario
             </button>
             <button
-              onClick={() => setActiveTab('config')}
+              onClick={() => { setActiveTab('config'); setTempConfig(storeConfig || {}); }}
               className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === 'config' ? 'bg-white shadow-sm text-apple-text' : 'text-apple-gray hover:text-apple-text'}`}
             >
               Ajustes de Tienda
@@ -595,8 +595,8 @@ export default function Admin({
                 <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Nombre de la Tienda</label>
                 <input
                   type="text"
-                  value={tempConfig.storeName}
-                  onChange={(e) => setTempConfig({...tempConfig, storeName: e.target.value})}
+                  value={tempConfig?.storeName || ""}
+                  onChange={(e) => setTempConfig({...(tempConfig || {}), storeName: e.target.value})}
                   className="w-full p-4 bg-apple-bg rounded-2xl border-2 border-transparent focus:border-apple-blue focus:bg-white outline-none transition-all"
                 />
               </div>
@@ -604,8 +604,8 @@ export default function Admin({
                 <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Número de WhatsApp (ej: +1234567890)</label>
                 <input
                   type="text"
-                  value={tempConfig.whatsappNumber}
-                  onChange={(e) => setTempConfig({...tempConfig, whatsappNumber: e.target.value})}
+                  value={tempConfig?.whatsappNumber || ""}
+                  onChange={(e) => setTempConfig({...(tempConfig || {}), whatsappNumber: e.target.value})}
                   className="w-full p-4 bg-apple-bg rounded-2xl border-2 border-transparent focus:border-apple-blue focus:bg-white outline-none transition-all"
                 />
               </div>
@@ -613,8 +613,8 @@ export default function Admin({
                 <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Correo Electrónico</label>
                 <input
                   type="email"
-                  value={tempConfig.email}
-                  onChange={(e) => setTempConfig({...tempConfig, email: e.target.value})}
+                  value={tempConfig?.email || ""}
+                  onChange={(e) => setTempConfig({...(tempConfig || {}), email: e.target.value})}
                   className="w-full p-4 bg-apple-bg rounded-2xl border-2 border-transparent focus:border-apple-blue focus:bg-white outline-none transition-all"
                 />
               </div>
@@ -622,8 +622,8 @@ export default function Admin({
                 <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Enlace de Instagram</label>
                 <input
                   type="text"
-                  value={tempConfig.instagramUrl}
-                  onChange={(e) => setTempConfig({...tempConfig, instagramUrl: e.target.value})}
+                  value={tempConfig?.instagramUrl || ""}
+                  onChange={(e) => setTempConfig({...(tempConfig || {}), instagramUrl: e.target.value})}
                   className="w-full p-4 bg-apple-bg rounded-2xl border-2 border-transparent focus:border-apple-blue focus:bg-white outline-none transition-all"
                 />
               </div>
@@ -641,20 +641,20 @@ export default function Admin({
                           if (!e.target.files || !e.target.files[0]) return;
                           const file = e.target.files[0];
                           const base64 = await processImageFile(file, 200, 200);
-                          setTempConfig({...tempConfig, logoUrl: base64});
+                          setTempConfig({...(tempConfig || {}), logoUrl: base64});
                         }}
                       />
                     </label>
                   </div>
-                  {tempConfig.logoUrl && (
+                  {tempConfig?.logoUrl && (
                     <div className="w-16 h-16 rounded-xl border border-gray-200 overflow-hidden flex-shrink-0 bg-white">
-                      <img src={tempConfig.logoUrl} alt="Logo preview" className="w-full h-full object-contain" />
+                      <img src={tempConfig?.logoUrl} alt="Logo preview" className="w-full h-full object-contain" />
                     </div>
                   )}
-                  {tempConfig.logoUrl && (
+                  {tempConfig?.logoUrl && (
                     <button 
                       type="button" 
-                      onClick={() => setTempConfig({...tempConfig, logoUrl: ''})}
+                      onClick={() => setTempConfig({...(tempConfig || {}), logoUrl: ''})}
                       className="px-4 py-2 bg-red-50 text-red-600 rounded-xl font-medium text-sm hover:bg-red-100"
                     >
                       Remover
@@ -680,14 +680,14 @@ export default function Admin({
                           if (!e.target.files || e.target.files.length === 0) return;
                           const file = e.target.files[0];
                           const base64 = await processImageFile(file, 1920, 1080);
-                          setTempConfig({...tempConfig, heroImageUrl: base64});
+                          setTempConfig({...(tempConfig || {}), heroImageUrl: base64});
                         }}
                       />
                     </label>
                   </div>
-                  {tempConfig.heroImageUrl && (
+                  {tempConfig?.heroImageUrl && (
                     <div className="w-32 h-20 rounded-xl border border-gray-200 overflow-hidden flex-shrink-0 bg-white relative">
-                      <img src={tempConfig.heroImageUrl} alt="Hero preview" className="w-full h-full object-cover" />
+                      <img src={tempConfig?.heroImageUrl} alt="Hero preview" className="w-full h-full object-cover" />
                     </div>
                   )}
                 </div>
@@ -698,14 +698,14 @@ export default function Admin({
                   <input
                     type="checkbox"
                     id="popupEnabled"
-                    checked={tempConfig.popupEnabled || false}
-                    onChange={(e) => setTempConfig({...tempConfig, popupEnabled: e.target.checked})}
+                    checked={tempConfig?.popupEnabled || false}
+                    onChange={(e) => setTempConfig({...(tempConfig || {}), popupEnabled: e.target.checked})}
                     className="w-5 h-5 rounded text-apple-blue focus:ring-apple-blue"
                   />
                   <label htmlFor="popupEnabled" className="text-sm font-medium text-apple-text select-none">Habilitar Banner Emergente de Inicio (HD)</label>
                 </div>
                 
-                {tempConfig.popupEnabled && (
+                {tempConfig?.popupEnabled && (
                   <div className="flex flex-col gap-4">
                     <div className="flex gap-4 items-end">
                       <div className="flex-1">
@@ -719,14 +719,14 @@ export default function Admin({
                               if (!e.target.files || !e.target.files[0]) return;
                               const file = e.target.files[0];
                               const base64 = await processImageFile(file, 1920, 1080);
-                              setTempConfig({...tempConfig, popupImageUrl: base64});
+                              setTempConfig({...(tempConfig || {}), popupImageUrl: base64});
                             }}
                           />
                         </label>
                       </div>
-                      {tempConfig.popupImageUrl && (
+                      {tempConfig?.popupImageUrl && (
                         <div className="w-32 h-20 rounded-xl border border-gray-200 overflow-hidden flex-shrink-0 bg-white relative">
-                          <img src={tempConfig.popupImageUrl} alt="Banner preview" className="w-full h-full object-cover" />
+                          <img src={tempConfig?.popupImageUrl} alt="Banner preview" className="w-full h-full object-cover" />
                         </div>
                       )}
                     </div>
@@ -738,8 +738,8 @@ export default function Admin({
                 <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Horario de Atención</label>
                 <input
                   type="text"
-                  value={tempConfig.businessHours}
-                  onChange={(e) => setTempConfig({...tempConfig, businessHours: e.target.value})}
+                  value={tempConfig?.businessHours || ""}
+                  onChange={(e) => setTempConfig({...(tempConfig || {}), businessHours: e.target.value})}
                   className="w-full p-4 bg-apple-bg rounded-2xl border-2 border-transparent focus:border-apple-blue focus:bg-white outline-none transition-all"
                 />
               </div>
@@ -751,21 +751,21 @@ export default function Admin({
                     import('../supabase').then(async ({ supabase }) => {
                       const { error } = await supabase.from('store_config').upsert({ 
                         id: 'store', 
-                        store_name: tempConfig.storeName,
-                        whatsapp_number: tempConfig.whatsappNumber,
-                        email: tempConfig.email,
-                        instagram_url: tempConfig.instagramUrl,
-                        business_hours: tempConfig.businessHours,
-                        currency_symbol: tempConfig.currencySymbol,
-                        logo_url: tempConfig.logoUrl,
-                        popup_enabled: tempConfig.popupEnabled,
-                        popup_image_url: tempConfig.popupImageUrl
+                        store_name: tempConfig?.storeName,
+                        whatsapp_number: tempConfig?.whatsappNumber,
+                        email: tempConfig?.email,
+                        instagram_url: tempConfig?.instagramUrl,
+                        business_hours: tempConfig?.businessHours,
+                        currency_symbol: tempConfig?.currencySymbol,
+                        logo_url: tempConfig?.logoUrl,
+                        popup_enabled: tempConfig?.popupEnabled,
+                        popup_image_url: tempConfig?.popupImageUrl
                       });
                       if (error) console.error(error);
                       
                       const { error: heroError } = await supabase.from('store_config').upsert({
                         id: 'hero',
-                        popup_image_url: tempConfig.heroImageUrl
+                        popup_image_url: tempConfig?.heroImageUrl
                       });
                       if (heroError) console.error(heroError);
                     });
