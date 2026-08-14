@@ -45,7 +45,20 @@ export default function App() {
           .channel('config_changes')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, () => {
              supabase.from('store_config').select('*').eq('id', 'store').single().then(({ data }) => {
-               if (data && isMounted) setStoreConfig({ ...CONFIG, ...data });
+               if (data && isMounted) {
+                 setStoreConfig({
+                   ...CONFIG,
+                   storeName: data.store_name ?? CONFIG.storeName,
+                   whatsappNumber: data.whatsapp_number ?? CONFIG.whatsappNumber,
+                   email: data.email ?? CONFIG.email,
+                   instagramUrl: data.instagram_url ?? CONFIG.instagramUrl,
+                   businessHours: data.business_hours ?? CONFIG.businessHours,
+                   currencySymbol: data.currency_symbol ?? CONFIG.currencySymbol,
+                   logoUrl: data.logo_url ?? CONFIG.logoUrl,
+                   popupEnabled: data.popup_enabled ?? CONFIG.popupEnabled,
+                   popupImageUrl: data.popup_image_url ?? CONFIG.popupImageUrl
+                 });
+               }
              });
           })
           .subscribe();
@@ -57,7 +70,20 @@ export default function App() {
         });
 
         supabase.from('store_config').select('*').eq('id', 'store').single().then(({ data }) => {
-          if (data && isMounted) setStoreConfig({ ...CONFIG, ...data });
+          if (data && isMounted) {
+             setStoreConfig({
+               ...CONFIG,
+               storeName: data.store_name ?? CONFIG.storeName,
+               whatsappNumber: data.whatsapp_number ?? CONFIG.whatsappNumber,
+               email: data.email ?? CONFIG.email,
+               instagramUrl: data.instagram_url ?? CONFIG.instagramUrl,
+               businessHours: data.business_hours ?? CONFIG.businessHours,
+               currencySymbol: data.currency_symbol ?? CONFIG.currencySymbol,
+               logoUrl: data.logo_url ?? CONFIG.logoUrl,
+               popupEnabled: data.popup_enabled ?? CONFIG.popupEnabled,
+               popupImageUrl: data.popup_image_url ?? CONFIG.popupImageUrl
+             });
+          }
         });
     });
 

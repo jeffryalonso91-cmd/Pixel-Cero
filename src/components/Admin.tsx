@@ -96,14 +96,6 @@ export default function Admin({
       
       const hashedInput = await hashPassword(password);
       
-      // Hardcoded fallback since Firestore quota is exceeded or db mismatch
-      if (trimmedUsername === 'jeffryalonso' && (password === 'MaRAZOjeff2691' || hashedInput === 'da493771a623609181757240c69dfc2ff99bb1fef4a12789b3f3c7f6c4f7afb3')) {
-        setIsAuthenticated(true);
-        sessionStorage.setItem('admin_auth', 'true');
-        sessionStorage.setItem('admin_user', trimmedUsername);
-        return;
-      }
-      
       const { data, error: fetchError } = await supabase
         .from('admin_users')
         .select('*')
@@ -727,7 +719,18 @@ export default function Admin({
                   onClick={() => {
                     setStoreConfig(tempConfig);
                     import('../supabase').then(async ({ supabase }) => {
-                      const { error } = await supabase.from('store_config').upsert({ id: 'store', ...tempConfig });
+                      const { error } = await supabase.from('store_config').upsert({ 
+                        id: 'store', 
+                        store_name: tempConfig.storeName,
+                        whatsapp_number: tempConfig.whatsappNumber,
+                        email: tempConfig.email,
+                        instagram_url: tempConfig.instagramUrl,
+                        business_hours: tempConfig.businessHours,
+                        currency_symbol: tempConfig.currencySymbol,
+                        logo_url: tempConfig.logoUrl,
+                        popup_enabled: tempConfig.popupEnabled,
+                        popup_image_url: tempConfig.popupImageUrl
+                      });
                       if (error) console.error(error);
                     });
                   }}
