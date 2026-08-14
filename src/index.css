@@ -13,3 +13,11 @@
 body {
   @apply bg-apple-bg text-apple-text font-sans antialiased;
 }
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}

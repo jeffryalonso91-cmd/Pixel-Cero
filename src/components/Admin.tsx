@@ -664,6 +664,36 @@ export default function Admin({
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-apple-text mb-2 ml-1">Imagen de Portada (Hero)</label>
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <label className="cursor-pointer flex items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 rounded-2xl hover:border-apple-blue hover:bg-apple-bg transition-colors">
+                      <div className="flex flex-col items-center text-apple-gray">
+                        <Upload size={24} className="mb-2" />
+                        <span className="text-sm font-medium">Subir imagen HD</span>
+                      </div>
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={async (e) => {
+                          if (!e.target.files || e.target.files.length === 0) return;
+                          const file = e.target.files[0];
+                          const base64 = await processImageFile(file, 1920, 1080);
+                          setTempConfig({...tempConfig, heroImageUrl: base64});
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {tempConfig.heroImageUrl && (
+                    <div className="w-32 h-20 rounded-xl border border-gray-200 overflow-hidden flex-shrink-0 bg-white relative">
+                      <img src={tempConfig.heroImageUrl} alt="Hero preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
                 <div className="flex items-center gap-2 mb-4">
                   <input
                     type="checkbox"
@@ -732,6 +762,12 @@ export default function Admin({
                         popup_image_url: tempConfig.popupImageUrl
                       });
                       if (error) console.error(error);
+                      
+                      const { error: heroError } = await supabase.from('store_config').upsert({
+                        id: 'hero',
+                        popup_image_url: tempConfig.heroImageUrl
+                      });
+                      if (heroError) console.error(heroError);
                     });
                   }}
                   className="px-8 py-4 bg-apple-blue text-white rounded-full font-medium hover:bg-apple-blue-hover transition-colors"

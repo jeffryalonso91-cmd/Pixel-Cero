@@ -2,8 +2,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useContext } from 'react';
 import { ConfigContext } from '../App';
 import type { Product } from '../data';
-import { MessageCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import React, { useState } from 'react';
+import { MessageCircle, X, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
 
 function Lightbox({ images, onClose }: { images: string[], onClose: () => void }) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -76,6 +76,7 @@ function Lightbox({ images, onClose }: { images: string[], onClose: () => void }
 export default function Catalog({ products }: { products: Product[] }) {
   const [activeGallery, setActiveGallery] = useState<string[] | null>(null);
   const [filter, setFilter] = useState<'all' | 'available' | 'sold'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const config = useContext(ConfigContext);
 
   const handleWhatsApp = (model: string, price: number) => {
@@ -83,12 +84,22 @@ export default function Catalog({ products }: { products: Product[] }) {
     window.open(`https://wa.me/${config.whatsappNumber.replace(/[^0-9]/g, '')}?text=${message}`, '_blank');
   };
 
-  const filteredProducts = products.filter(p => {
-    if (filter === 'all') return true;
-    if (filter === 'available') return p.status !== 'Vendido';
-    if (filter === 'sold') return p.status === 'Vendido';
-    return true;
-  });
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
+      // 1. Status Filter
+      if (filter === 'available' && p.status === 'Vendido') return false;
+      if (filter === 'sold' && p.status !== 'Vendido') return false;
+      
+      // 2. Search Query Filter
+      if (searchQuery.trim() !== '') {
+        const query = searchQuery.toLowerCase();
+        const searchString = `${p.model} ${p.storage} ${p.condition} ${p.battery} ${p.price}`.toLowerCase();
+        if (!searchString.includes(query)) return false;
+      }
+      
+      return true;
+    });
+  }, [products, filter, searchQuery]);
 
   return (
     <section id="catalog" className="py-24 px-6 max-w-7xl mx-auto">
@@ -113,25 +124,40 @@ export default function Catalog({ products }: { products: Product[] }) {
         </motion.p>
       </div>
 
-      <div className="flex justify-center gap-2 mb-12">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors ${filter === 'all' ? 'bg-apple-text text-white' : 'bg-apple-bg text-apple-gray hover:bg-gray-200'}`}
-        >
-          Todos
-        </button>
-        <button
-          onClick={() => setFilter('available')}
-          className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors ${filter === 'available' ? 'bg-apple-text text-white' : 'bg-apple-bg text-apple-gray hover:bg-gray-200'}`}
-        >
-          Disponibles
-        </button>
-        <button
-          onClick={() => setFilter('sold')}
-          className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors ${filter === 'sold' ? 'bg-apple-text text-white' : 'bg-apple-bg text-apple-gray hover:bg-gray-200'}`}
-        >
-          Vendidos
-        </button>
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
+        <div className="relative w-full md:w-96">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-apple-gray">
+            <Search size={20} />
+          </div>
+          <input
+            type="text"
+            placeholder="Buscar modelo, capacidad, precio..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-apple-bg border-none rounded-full py-3.5 pl-12 pr-6 text-apple-text placeholder:text-apple-gray/70 focus:outline-none focus:ring-2 focus:ring-black/10 transition-shadow text-base"
+          />
+        </div>
+
+        <div className="flex justify-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${filter === 'all' ? 'bg-apple-text text-white' : 'bg-apple-bg text-apple-gray hover:bg-gray-200'}`}
+          >
+            Todos
+          </button>
+          <button
+            onClick={() => setFilter('available')}
+            className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${filter === 'available' ? 'bg-apple-text text-white' : 'bg-apple-bg text-apple-gray hover:bg-gray-200'}`}
+          >
+            Disponibles
+          </button>
+          <button
+            onClick={() => setFilter('sold')}
+            className={`px-6 py-2.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${filter === 'sold' ? 'bg-apple-text text-white' : 'bg-apple-bg text-apple-gray hover:bg-gray-200'}`}
+          >
+            Vendidos
+          </button>
+        </div>
       </div>
 
       {filteredProducts.length === 0 ? (

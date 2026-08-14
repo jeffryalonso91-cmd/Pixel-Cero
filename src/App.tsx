@@ -44,20 +44,24 @@ export default function App() {
         configSubscription = supabase
           .channel('config_changes')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'store_config' }, () => {
-             supabase.from('store_config').select('*').eq('id', 'store').single().then(({ data }) => {
+             supabase.from('store_config').select('*').in('id', ['store', 'hero']).then(({ data }) => {
                if (data && isMounted) {
-                 setStoreConfig({
-                   ...CONFIG,
-                   storeName: data.store_name ?? CONFIG.storeName,
-                   whatsappNumber: data.whatsapp_number ?? CONFIG.whatsappNumber,
-                   email: data.email ?? CONFIG.email,
-                   instagramUrl: data.instagram_url ?? CONFIG.instagramUrl,
-                   businessHours: data.business_hours ?? CONFIG.businessHours,
-                   currencySymbol: data.currency_symbol ?? CONFIG.currencySymbol,
-                   logoUrl: data.logo_url ?? CONFIG.logoUrl,
-                   popupEnabled: data.popup_enabled ?? CONFIG.popupEnabled,
-                   popupImageUrl: data.popup_image_url ?? CONFIG.popupImageUrl
-                 });
+                 const storeData = data.find((d: any) => d.id === 'store') || {};
+                 const heroData = data.find((d: any) => d.id === 'hero') || {};
+                 
+                 setStoreConfig(prev => ({
+                   ...prev,
+                   storeName: storeData.store_name ?? prev.storeName,
+                   whatsappNumber: storeData.whatsapp_number ?? prev.whatsappNumber,
+                   email: storeData.email ?? prev.email,
+                   instagramUrl: storeData.instagram_url ?? prev.instagramUrl,
+                   businessHours: storeData.business_hours ?? prev.businessHours,
+                   currencySymbol: storeData.currency_symbol ?? prev.currencySymbol,
+                   logoUrl: storeData.logo_url ?? prev.logoUrl,
+                   popupEnabled: storeData.popup_enabled ?? prev.popupEnabled,
+                   popupImageUrl: storeData.popup_image_url ?? prev.popupImageUrl,
+                   heroImageUrl: heroData.popup_image_url ?? prev.heroImageUrl
+                 }));
                }
              });
           })
@@ -69,20 +73,24 @@ export default function App() {
           if (isMounted) setLoading(false);
         });
 
-        supabase.from('store_config').select('*').eq('id', 'store').single().then(({ data }) => {
+        supabase.from('store_config').select('*').in('id', ['store', 'hero']).then(({ data }) => {
           if (data && isMounted) {
-             setStoreConfig({
-               ...CONFIG,
-               storeName: data.store_name ?? CONFIG.storeName,
-               whatsappNumber: data.whatsapp_number ?? CONFIG.whatsappNumber,
-               email: data.email ?? CONFIG.email,
-               instagramUrl: data.instagram_url ?? CONFIG.instagramUrl,
-               businessHours: data.business_hours ?? CONFIG.businessHours,
-               currencySymbol: data.currency_symbol ?? CONFIG.currencySymbol,
-               logoUrl: data.logo_url ?? CONFIG.logoUrl,
-               popupEnabled: data.popup_enabled ?? CONFIG.popupEnabled,
-               popupImageUrl: data.popup_image_url ?? CONFIG.popupImageUrl
-             });
+             const storeData = data.find((d: any) => d.id === 'store') || {};
+             const heroData = data.find((d: any) => d.id === 'hero') || {};
+             
+             setStoreConfig(prev => ({
+               ...prev,
+               storeName: storeData.store_name ?? prev.storeName,
+               whatsappNumber: storeData.whatsapp_number ?? prev.whatsappNumber,
+               email: storeData.email ?? prev.email,
+               instagramUrl: storeData.instagram_url ?? prev.instagramUrl,
+               businessHours: storeData.business_hours ?? prev.businessHours,
+               currencySymbol: storeData.currency_symbol ?? prev.currencySymbol,
+               logoUrl: storeData.logo_url ?? prev.logoUrl,
+               popupEnabled: storeData.popup_enabled ?? prev.popupEnabled,
+               popupImageUrl: storeData.popup_image_url ?? prev.popupImageUrl,
+               heroImageUrl: heroData.popup_image_url ?? prev.heroImageUrl
+             }));
           }
         });
     });
